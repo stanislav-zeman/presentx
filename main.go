@@ -115,6 +115,7 @@ func main() {
 
 	initPlayground(*basePath, origin)
 	http.Handle("/static/", http.FileServer(http.Dir(*basePath)))
+	http.HandleFunc("/", dirHandler)
 
 	if !ln.Addr().(*net.TCPAddr).IP.IsLoopback() &&
 		present.PlayEnabled && !*nativeClient && !*usePlayground {
