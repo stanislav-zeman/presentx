@@ -1,4 +1,4 @@
-module github.com/soypat/go-presentx
+module github.com/stanislav-zeman/presentx
 
 go 1.24.0
 
