@@ -1,17 +1,28 @@
-# Ignore user created slides which are not part of the
-# example
-# slides/*
-# !slides/_samplesrc/**.go
-# !slides/README.md
-# !slides/hello.go
-# !slides/trash.go
-# !slides/sample.slide
+# Binaries for programs and plugins
+bin
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
 
-# Ignore user added assets except for 
-# sample slide images
-assets/*
-!assets/whygo
-!assets/go-img
-assets/go-img/*
-!assets/go-img/sitting_gopher.svg
-!assets/go-img/engine-gopher.jpg
+# Test binary, built with `go test -c`
+*.test
+
+# Coverage and analysis tools
+*.out
+*.out.html
+
+# Go workspace file
+go.work
+go.work.sum
+
+# Configurations
+.env
+
+# MacOS
+.DS_Store
+
+# IDEs and editors
+.idea
+.vscode
