@@ -7,23 +7,22 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"path/filepath"
 	"runtime"
 	"time"
 
 	"golang.org/x/tools/godoc/static"
-	"golang.org/x/tools/playground/socket"
-	"golang.org/x/tools/present"
-
 	// This will register handlers at /compile and /share that will proxy to the
 	// respective endpoints at play.golang.org. This allows the frontend to call
 	// these endpoints without needing cross-origin request sharing (CORS).
 	// Note that this is imported regardless of whether the endpoints are used or
 	// not (in the case of a local socket connection, they are not called).
 	_ "golang.org/x/tools/playground"
+	"golang.org/x/tools/playground/socket"
+	"golang.org/x/tools/present"
 )
 
 var scripts = []string{"prism.js", "jquery.js", "jquery-ui.js", "playground.js", "play.js"}
@@ -33,20 +32,26 @@ var scripts = []string{"prism.js", "jquery.js", "jquery-ui.js", "playground.js",
 // initializes the playground with the specified transport.
 func playScript(root, transport string) {
 	modTime := time.Now()
+
 	var buf bytes.Buffer
+
 	for _, p := range scripts {
 		if s, ok := static.Files[p]; ok {
 			buf.WriteString(s)
 			continue
 		}
-		b, err := ioutil.ReadFile(filepath.Join(root, "static", p))
+
+		b, err := os.ReadFile(filepath.Join(root, "static", p))
 		if err != nil {
 			panic(err)
 		}
+
 		buf.Write(b)
 	}
+
 	fmt.Fprintf(&buf, "\ninitPlayground(new %v());\n", transport)
 	b := buf.Bytes()
+
 	http.HandleFunc("/play.js", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-type", "application/javascript")
 		http.ServeContent(w, r, "", modTime, bytes.NewReader(b))
@@ -57,6 +62,7 @@ func initPlayground(basepath string, origin *url.URL) {
 	if !present.PlayEnabled {
 		return
 	}
+
 	if *usePlayground {
 		playScript(basepath, "HTTPTransport")
 		return
@@ -70,9 +76,11 @@ func initPlayground(basepath string, origin *url.URL) {
 			if runtime.GOARCH == "amd64" {
 				return environ("GOOS=nacl", "GOARCH=amd64p32")
 			}
+
 			return environ("GOOS=nacl")
 		}
 	}
+
 	playScript(basepath, "SocketTransport")
 	http.Handle("/socket", socket.NewHandler(origin))
 }
@@ -85,5 +93,6 @@ func playable(c present.Code) bool {
 	if *usePlayground {
 		return play && c.Ext == ".go"
 	}
+
 	return play
 }

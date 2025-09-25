@@ -24,6 +24,7 @@ func dirHandler(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+
 	name := filepath.Join(*contentPath, r.URL.Path)
 	if isDoc(name) {
 		err := renderDoc(w, name)
@@ -31,19 +32,27 @@ func dirHandler(w http.ResponseWriter, r *http.Request) {
 			log.Println(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
+
 		return
 	}
-	if isDir, err := dirList(w, name); err != nil {
+
+	isDir, err := dirList(w, name)
+	if err != nil {
 		addr, _, e := net.SplitHostPort(r.RemoteAddr)
 		if e != nil {
 			addr = r.RemoteAddr
 		}
+
 		log.Printf("request from %s: %s", addr, err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	} else if isDir {
+
 		return
 	}
+
+	if isDir {
+		return
+	}
+
 	http.FileServer(http.Dir(*contentPath)).ServeHTTP(w, r)
 }
 
@@ -75,15 +84,21 @@ func initTemplates(base string) error {
 
 		// Read and parse the input.
 		tmpl := present.Template()
+
 		tmpl = tmpl.Funcs(template.FuncMap{"playable": playable})
-		if _, err := tmpl.ParseFiles(actionTmpl, contentTmpl); err != nil {
+
+		_, err := tmpl.ParseFiles(actionTmpl, contentTmpl)
+		if err != nil {
 			return err
 		}
+
 		contentTemplate[ext] = tmpl
 	}
 
 	var err error
+
 	dirListTemplate, err = template.ParseFiles(filepath.Join(base, "templates/dir.tmpl"))
+
 	return err
 }
 
@@ -108,7 +123,11 @@ func parse(name string, mode present.ParseMode) (*present.Doc, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
+
+	defer func() {
+		_ = f.Close()
+	}()
+
 	return present.Parse(f, name, mode)
 }
 
@@ -122,26 +141,35 @@ func dirList(w io.Writer, name string) (isDir bool, err error) {
 	if err != nil {
 		return false, err
 	}
-	defer f.Close()
+
+	defer func() {
+		_ = f.Close()
+	}()
+
 	fi, err := f.Stat()
 	if err != nil {
 		return false, err
 	}
+
 	if isDir = fi.IsDir(); !isDir {
 		return false, nil
 	}
+
 	fis, err := f.Readdir(0)
 	if err != nil {
 		return false, err
 	}
+
 	strippedPath := strings.TrimPrefix(name, filepath.Clean(*contentPath))
 	strippedPath = strings.TrimPrefix(strippedPath, "/")
 	d := &dirListData{Path: strippedPath}
+
 	for _, fi := range fis {
 		// skip the golang.org directory
 		if name == "." && fi.Name() == "golang.org" {
 			continue
 		}
+
 		e := dirEntry{
 			Name: fi.Name(),
 			Path: filepath.ToSlash(filepath.Join(strippedPath, fi.Name())),
@@ -150,13 +178,17 @@ func dirList(w io.Writer, name string) (isDir bool, err error) {
 			d.Dirs = append(d.Dirs, e)
 			continue
 		}
+
 		if isDoc(e.Name) {
 			fn := filepath.ToSlash(filepath.Join(name, fi.Name()))
-			if p, err := parse(fn, present.TitlesOnly); err != nil {
+
+			p, err := parse(fn, present.TitlesOnly)
+			if err != nil {
 				log.Printf("parse(%q, present.TitlesOnly): %v", fn, err)
 			} else {
 				e.Title = p.Title
 			}
+
 			switch filepath.Ext(e.Path) {
 			case ".article":
 				d.Articles = append(d.Articles, e)
@@ -167,13 +199,16 @@ func dirList(w io.Writer, name string) (isDir bool, err error) {
 			d.Other = append(d.Other, e)
 		}
 	}
+
 	if d.Path == "." {
 		d.Path = ""
 	}
+
 	sort.Sort(d.Dirs)
 	sort.Sort(d.Slides)
 	sort.Sort(d.Articles)
 	sort.Sort(d.Other)
+
 	return true, dirListTemplate.Execute(w, d)
 }
 
@@ -186,6 +221,7 @@ func showFile(n string) bool {
 	default:
 		return isDoc(n)
 	}
+
 	return true
 }
 
@@ -194,6 +230,7 @@ func showDir(n string) bool {
 	if len(n) > 0 && (n[0] == '.' || n[0] == '_') || n == "present" {
 		return false
 	}
+
 	return true
 }
 

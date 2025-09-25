@@ -23,15 +23,27 @@ import (
 const basePkg = "golang.org/x/tools/cmd/present"
 
 var (
-	httpAddr      = flag.String("http", "127.0.0.1:3999", "HTTP service address (e.g., '127.0.0.1:3999')")
-	originHost    = flag.String("orighost", "", "host component of web origin URL (e.g., 'localhost')")
-	basePath      = flag.String("base", ".", "base path for slide template and static resources. default is current directory")
+	httpAddr   = flag.String("http", "127.0.0.1:3999", "HTTP service address (e.g., '127.0.0.1:3999')")
+	originHost = flag.String("orighost", "", "host component of web origin URL (e.g., 'localhost')")
+	basePath   = flag.String(
+		"base",
+		".",
+		"base path for slide template and static resources. default is current directory",
+	)
 	contentPath   = flag.String("content", ".", "base path for presentation content")
-	usePlayground = flag.Bool("use_playground", false, "run code snippets using play.golang.org; if false, run them locally and deliver results by WebSocket transport")
-	nativeClient  = flag.Bool("nacl", false, "use Native Client environment playground (prevents non-Go code execution) when using local WebSocket transport")
+	usePlayground = flag.Bool(
+		"use_playground",
+		false,
+		"run code snippets using play.golang.org; if false, run them locally and deliver results by WebSocket transport",
+	)
+	nativeClient = flag.Bool(
+		"nacl",
+		false,
+		"use Native Client environment playground (prevents non-Go code execution) when using local WebSocket transport",
+	)
 )
 
-// Embedded directories
+// Embedded directories.
 var (
 	//go:embed templates
 	tempFS embed.FS
@@ -41,20 +53,29 @@ var (
 
 func main() {
 	flag.BoolVar(&present.PlayEnabled, "play", true, "enable playground (permit execution of arbitrary user code)")
-	flag.BoolVar(&present.NotesEnabled, "notes", false, "enable presenter notes (press 'N' from the browser to display them)")
+	flag.BoolVar(
+		&present.NotesEnabled,
+		"notes",
+		false,
+		"enable presenter notes (press 'N' from the browser to display them)",
+	)
 	flag.Parse()
 
 	if os.Getenv("GAE_ENV") == "standard" {
 		log.Print("Configuring for App Engine Standard")
+
 		port := os.Getenv("PORT")
 		if port == "" {
 			port = "8080"
 		}
-		*httpAddr = fmt.Sprintf("0.0.0.0:%s", port)
+
+		*httpAddr = "0.0.0.0:" + port
+
 		pwd, err := os.Getwd()
 		if err != nil {
 			log.Fatalf("Couldn't get pwd: %v\n", err)
 		}
+
 		*basePath = pwd
 		*usePlayground = true
 		*contentPath = "./content/"
@@ -67,12 +88,13 @@ func main() {
 			fmt.Fprintf(os.Stderr, basePathMessage, basePkg)
 			os.Exit(1)
 		}
+
 		*basePath = p.Dir
 	}
 
 	// We attempt to create templates and static files if not present
-	rebed.Patch(tempFS, "")
-	rebed.Patch(staticFS, "")
+	_ = rebed.Patch(tempFS, "")
+	_ = rebed.Patch(staticFS, "")
 
 	err := initTemplates(*basePath)
 	if err != nil {
@@ -83,7 +105,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer ln.Close()
+
+	defer func() {
+		_ = ln.Close()
+	}()
 
 	_, port, err := net.SplitHostPort(ln.Addr().String())
 	if err != nil {
@@ -91,11 +116,13 @@ func main() {
 	}
 
 	origin := &url.URL{Scheme: "http"}
+
 	if *originHost != "" {
 		if strings.HasPrefix(*originHost, "https://") {
 			*originHost = strings.TrimPrefix(*originHost, "https://")
 			origin.Scheme = "https"
 		}
+
 		*originHost = strings.TrimPrefix(*originHost, "http://")
 		origin.Host = net.JoinHostPort(*originHost, port)
 	} else if ln.Addr().(*net.TCPAddr).IP.IsUnspecified() {
@@ -106,6 +133,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
+
 		if reqPort == "0" {
 			origin.Host = net.JoinHostPort(reqHost, port)
 		} else {
@@ -123,27 +151,34 @@ func main() {
 	}
 
 	log.Printf("Open your web browser and visit %s", origin.String())
+
 	if present.NotesEnabled {
 		log.Println("Notes are enabled, press 'N' from the browser to display them.")
 	}
+
 	log.Fatal(http.Serve(ln, nil))
 }
 
 func environ(vars ...string) []string {
 	env := os.Environ()
+
 	for _, r := range vars {
 		k := strings.SplitAfter(r, "=")[0]
+
 		var found bool
+
 		for i, v := range env {
 			if strings.HasPrefix(v, k) {
 				env[i] = r
 				found = true
 			}
 		}
+
 		if !found {
 			env = append(env, r)
 		}
 	}
+
 	return env
 }
 
@@ -155,9 +190,7 @@ in your Go workspaces (GOPATH).
 You may use the -base flag to specify an alternate location.
 `
 
-const localhostWarning = `
-WARNING!  WARNING!  WARNING!
-
+const localhostWarning = `WARNING!
 The present server appears to be listening on an address that is not localhost
 and is configured to run code snippets locally. Anyone with access to this address
 and port will have access to this machine as the user running present.
@@ -167,5 +200,4 @@ To avoid this message, listen on localhost, run with -play=false, or run with
 
 If you don't understand this message, hit Control-C to terminate this process.
 
-WARNING!  WARNING!  WARNING!
-`
+WARNING!`
