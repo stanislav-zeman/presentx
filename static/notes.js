@@ -9,7 +9,7 @@ var isParentWindow = window.parent == window;
 
 // When parent window closes, clear storage and close child window
 if (isParentWindow) {
-  window.onbeforeunload = function() {
+  window.onbeforeunload = function () {
     localStorage.clear();
     if (notesWindow) notesWindow.close();
   };
@@ -29,18 +29,18 @@ function toggleNotesWindow() {
 // Create an unique key for the local storage so we don't mix the
 // destSlide of different presentations. For golang.org/issue/24688.
 function destSlideKey() {
-  var key = '';
+  var key = "";
   if (notesWindow) {
-    var slides = notesWindow.document.getElementById('presenter-slides');
-    key = slides.src.split('#')[0];
+    var slides = notesWindow.document.getElementById("presenter-slides");
+    key = slides.src.split("#")[0];
   } else {
-    key = window.location.href.split('#')[0];
+    key = window.location.href.split("#")[0];
   }
-  return 'destSlide:' + key;
+  return "destSlide:" + key;
 }
 
 function initNotes() {
-  notesWindow = window.open('', '', 'width=1000,height=700');
+  notesWindow = window.open("", "", "width=1000,height=700");
   var w = notesWindow;
   var slidesUrl = window.location.href;
 
@@ -49,13 +49,13 @@ function initNotes() {
 
   w.document.title = window.document.title;
 
-  var slides = w.document.createElement('iframe');
-  slides.id = 'presenter-slides';
+  var slides = w.document.createElement("iframe");
+  slides.id = "presenter-slides";
   slides.src = slidesUrl;
   w.document.body.appendChild(slides);
 
   var curSlide = parseInt(localStorage.getItem(destSlideKey()), 10);
-  var formattedNotes = '';
+  var formattedNotes = "";
   var section = sections[curSlide - 1];
   // curSlide is 0 when initialized from the first page of slides.
   // Check if section is valid before retrieving Notes.
@@ -66,38 +66,38 @@ function initNotes() {
   }
 
   // setTimeout needed for Firefox
-  setTimeout(function() {
+  setTimeout(function () {
     slides.focus();
   }, 100);
 
-  var notes = w.document.createElement('div');
-  notes.id = 'presenter-notes';
+  var notes = w.document.createElement("div");
+  notes.id = "presenter-notes";
   notes.innerHTML = formattedNotes;
   w.document.body.appendChild(notes);
 
   w.document.close();
 
   function addPresenterNotesStyle() {
-    var el = w.document.createElement('link');
-    el.rel = 'stylesheet';
-    el.type = 'text/css';
-    el.href = PERMANENT_URL_PREFIX + 'notes.css';
+    var el = w.document.createElement("link");
+    el.rel = "stylesheet";
+    el.type = "text/css";
+    el.href = PERMANENT_URL_PREFIX + "notes.css";
     w.document.body.appendChild(el);
-    w.document.querySelector('head').appendChild(el);
+    w.document.querySelector("head").appendChild(el);
   }
 
   addPresenterNotesStyle();
 
   // Add listener on notesWindow to update notes when triggered from
   // parent window
-  w.addEventListener('storage', updateNotes, false);
+  w.addEventListener("storage", updateNotes, false);
 }
 
 function formatNotes(notes) {
-  var formattedNotes = '';
+  var formattedNotes = "";
   if (notes) {
     for (var i = 0; i < notes.length; i++) {
-      formattedNotes = formattedNotes + '<p>' + notes[i] + '</p>';
+      formattedNotes = formattedNotes + "<p>" + notes[i] + "</p>";
     }
   }
   return formattedNotes;
@@ -109,7 +109,7 @@ function updateNotes() {
   if (!notesWindow) return;
   var destSlide = parseInt(localStorage.getItem(destSlideKey()), 10);
   var section = sections[destSlide - 1];
-  var el = notesWindow.document.getElementById('presenter-notes');
+  var el = notesWindow.document.getElementById("presenter-notes");
 
   if (!el) return;
 
@@ -118,7 +118,7 @@ function updateNotes() {
   } else if (destSlide == 0) {
     el.innerHTML = formatNotes(titleNotes);
   } else {
-    el.innerHTML = '';
+    el.innerHTML = "";
   }
 }
 
@@ -129,25 +129,25 @@ function updateNotes() {
 var playgroundHandlers = { onRun: [], onKill: [], onClose: [] };
 
 function updatePlay(e) {
-  var i = localStorage.getItem('play-index');
+  var i = localStorage.getItem("play-index");
 
   switch (e.key) {
-    case 'play-index':
+    case "play-index":
       return;
-    case 'play-action':
+    case "play-action":
       // Sync 'run', 'kill', 'close' actions
-      var action = localStorage.getItem('play-action');
+      var action = localStorage.getItem("play-action");
       playgroundHandlers[action][i](e);
       return;
-    case 'play-code':
+    case "play-code":
       // Sync code editing
-      var play = document.querySelectorAll('div.playground')[i];
-      play.innerHTML = localStorage.getItem('play-code');
+      var play = document.querySelectorAll("div.playground")[i];
+      play.innerHTML = localStorage.getItem("play-code");
       return;
-    case 'output-style':
+    case "output-style":
       // Sync resizing of playground output
-      var out = document.querySelectorAll('.output')[i];
-      out.style = localStorage.getItem('output-style');
+      var out = document.querySelectorAll(".output")[i];
+      out.style = localStorage.getItem("output-style");
       return;
   }
 }
@@ -155,21 +155,21 @@ function updatePlay(e) {
 // Reset 'run', 'kill', 'close' storage items when synced
 // so that successive actions can be synced correctly
 function updatePlayStorage(action, index, e) {
-  localStorage.setItem('play-index', index);
+  localStorage.setItem("play-index", index);
 
-  if (localStorage.getItem('play-action') === action) {
+  if (localStorage.getItem("play-action") === action) {
     // We're the receiving window, and the message has been received
-    localStorage.removeItem('play-action');
+    localStorage.removeItem("play-action");
   } else {
     // We're the triggering window, send the message
-    localStorage.setItem('play-action', action);
+    localStorage.setItem("play-action", action);
   }
 
-  if (action === 'onRun') {
-    if (localStorage.getItem('play-shiftKey') === 'true') {
-      localStorage.removeItem('play-shiftKey');
+  if (action === "onRun") {
+    if (localStorage.getItem("play-shiftKey") === "true") {
+      localStorage.removeItem("play-shiftKey");
     } else if (e.shiftKey) {
-      localStorage.setItem('play-shiftKey', e.shiftKey);
+      localStorage.setItem("play-shiftKey", e.shiftKey);
     }
   }
 }
